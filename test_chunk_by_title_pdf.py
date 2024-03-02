@@ -46,7 +46,7 @@ Config information
 """
 input_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev/input"
 output_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev/output"
-pdf_name = os.path.sep.join([input_folder,"CtoG-LCA-Canadian-CLT.pdf"])
+pdf_name = os.path.sep.join([input_folder,"Tu et al. 2016.pdf"])
 
 
 """
