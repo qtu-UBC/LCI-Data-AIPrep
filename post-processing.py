@@ -101,6 +101,14 @@ def image_screening(image_path: str) -> str:
     query = prompt_template.template.format(image_summary=image_summary)
     return llm(query)
 
+def text_synthesize(text: str) -> str:
+    """
+    synthesize the key information from the text elements
+    """
+
+    # prompt for text synthesis
+    
+
 
 
 if __name__ == "__main__":

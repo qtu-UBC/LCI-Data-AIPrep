@@ -118,10 +118,7 @@ for text in text_list:
         # Handle cases where the split does not result in two parts
         result_list.append({'title': 'Unknown', 'body': text})
 
-# for result in result_list:
-#     print(result)
-#     print("\n\n" + "-" * 80)
-#     input()
+# print(f"this is the list of extracted text: {text_list} \n")
 
 # Convert the result_list to a DataFrame
 df = pd.DataFrame(result_list)
@@ -147,6 +144,9 @@ with pd.ExcelWriter(os.path.sep.join([output_folder,'output_tables.xlsx'])) as w
 """
 Code for post-processing
 """
+# extract key information from text_list
+
+
 # retain only relevant images
 
 
