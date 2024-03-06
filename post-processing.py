@@ -11,6 +11,10 @@ Import libraries
 import openai
 import langchain_openai
 from langchain.prompts import PromptTemplate
+from langchain.text_splitter import CharacterTextSplitter
+from langchain.vectorstores import FAISS
+from langchain.chains import RetrievalQA
+from langchain.embeddings.openai import OpenAIEmbeddings
 import os
 import glob
 import base64
@@ -101,13 +105,15 @@ def image_screening(image_path: str) -> str:
     query = prompt_template.template.format(image_summary=image_summary)
     return llm(query)
 
-def text_synthesize(text: str) -> str:
+def text_synthesize(text_path: str) -> str:
     """
     synthesize the key information from the text elements
     """
 
     # prompt for text synthesis
-    
+    promt = """
+
+    """
 
 
 
