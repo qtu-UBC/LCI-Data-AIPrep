@@ -140,6 +140,12 @@ with pd.ExcelWriter(os.path.sep.join([output_folder,'output_tables.xlsx'])) as w
     for i,table_df in enumerate(table_dfs):
         table_df.to_excel(writer, sheet_name=f"extracted_tab_{i}")
 
+# Extract 'body' values and concatenate them into one long string with spaces (or any delimiter) in between
+df_text_only = df[df['contains_html']==False]
+long_string = " ".join(df_text_only['body'].tolist())
+# Export the text to a txt file 
+with open(os.sep.join([output_folder,'extracted_text.txt']), 'w') as file:
+    file.write(long_string)
 
 """
 Code for post-processing
