@@ -12,7 +12,7 @@ import openai
 import langchain_openai
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.vectorstores import FAISS
+from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.embeddings.openai import OpenAIEmbeddings
 import os
@@ -111,33 +111,68 @@ def text_synthesize(text_path: str) -> str:
     """
 
     # prompt for text synthesis
-    promt = """
+    prompt = """
 
     """
 
 
+def table_analyze(xlsx_file_path: str, sheet_of_interest: str, user_query: str) -> str:
+    """
+    analyze the content of a table using llm. Supported file type:
+    - .xlsx
+    """
+
+    ## parse the table into text string
+    # load the xlsx file
+    xlsx = pd.ExcelFile(xlsx_file_path)
+    # Initialize a dictionary to store text representations of each sheet
+    sheets_text = {}
+
+    # Loop through each sheet in the xlsx file
+    for sheet_name in xlsx.sheet_names:
+        # Read the sheet into a DataFrame
+        df = pd.read_excel(xlsx, sheet_name=sheet_name)
+    
+        # Convert the DataFrame to a text string, here we use CSV format as an intermediary
+        text_string = df.to_csv(index=False, sep=',')
+    
+        # Store the text string in our dictionary, using the sheet name as the key
+        sheets_text[sheet_name] = text_string
+
+    ## prompt for table analysis
+    prompt = f"{sheets_text[sheet_of_interest]}\n\n{user_query}"
+
+    return llm(prompt)
 
 if __name__ == "__main__":
-    # get a list of image paths
-    pattern = os.path.sep.join([output_folder, '*.jpg'])
-    image_path_list = glob.glob(pattern)
+
+    ## image screening
+    # # get a list of image paths
+    # pattern = os.path.sep.join([output_folder, '*.jpg'])
+    # image_path_list = glob.glob(pattern)
+    # # for image_path in image_path_list:
+    # #     print(image_path)
+
+    # # loop over the paths and retain only the ones relevant to LCA
+    # decision_dict = {}
+
     # for image_path in image_path_list:
-    #     print(image_path)
+    #     decision_dict[image_path.split("/")[-1]] = image_screening(image_path)
 
-    # loop over the paths and retain only the ones relevant to LCA
-    decision_dict = {}
+    # # convert dict to df
+    # data = list(decision_dict.items())
+    # decision_df = pd.DataFrame(data, columns=['ImagePath', 'Decision'])
+    # print(decision_df)
 
-    for image_path in image_path_list:
-        decision_dict[image_path.split("/")[-1]] = image_screening(image_path)
+    # # save the results in csv to the output folder
+    # decision_df.to_csv(os.path.sep.join([output_folder,'image_screening_results.csv']), index=False)
 
-    # convert dict to df
-    data = list(decision_dict.items())
-    decision_df = pd.DataFrame(data, columns=['ImagePath', 'Decision'])
-    print(decision_df)
+    ## table analysis
+    xlsx_file_path = os.path.sep.join([output_folder, 'output_tables.xlsx'])
+    sheet_of_interest = 'extracted_tab_3'
+    user_query = 'what is the amount of Polyurethane (finger joint), please answer using only the information provided in prompt'
 
-    # save the results in csv to the output folder
-    decision_df.to_csv(os.path.sep.join([output_folder,'image_screening_results.csv']), index=False)
-
-  
+    response = table_analyze(xlsx_file_path,sheet_of_interest,user_query)
+    print(response)
 
 
