@@ -10,6 +10,7 @@ Import libraries
 """
 import openai
 import langchain_openai
+from langchain_community.document_loaders import TextLoader
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -105,10 +106,48 @@ def image_screening(image_path: str) -> str:
     query = prompt_template.template.format(image_summary=image_summary)
     return llm(query)
 
-def text_synthesize(text_path: str) -> str:
+
+def build_index(db_directory: str, vectorstore_name: str, text_path: str):
     """
-    synthesize the key information from the text elements
+    build a local vector db and store in db_directory
     """
+
+    # List all files in the specified directory
+    files_in_directory = os.listdir(db_directory)
+    # Check if the specified file name is in the list of files
+    if not (vectorstore_name in files_in_directory):
+        # only build the db when it does not exist
+        # load text file
+        loader = TextLoader(text_path)
+        loader.load()
+
+        # splits a long document into smaller chunks that can fit into the LLM's
+        # model's context window
+        text_splitter = CharacterTextSplitter(
+                separator="\n",
+                chunk_size=1000,
+                chunk_overlap=100
+            )
+
+        # create_documents() create documents froma list of texts
+        texts = text_splitter.create_documents([loader])
+
+        # create a local vector database
+        embeddings = OpenAIEmbeddings()
+        vectorstore = FAISS.from_documents(texts, embeddings)
+        vectorstore.save_local(os.path.join(db_directory, f"{vectorstore_name}"))
+    else:
+        print(f"{vectorstore_name} ALREADY exists")
+
+def text_synthesize(db_path: str, embeddings) -> str:
+    """
+    synthesize the key information from the text elements (a local vector db)
+    Args:
+        - db_path: str, full path to the faiss index 
+    """
+
+    # Load from local storage
+    persisted_vectorstore = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
 
     # prompt for text synthesis
     prompt = """
