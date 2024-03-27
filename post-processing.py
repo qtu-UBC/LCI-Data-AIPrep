@@ -13,7 +13,6 @@ import langchain_openai
 from langchain_community.document_loaders import TextLoader
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.vectorstores.faiss import FAISS
 from langchain_community.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -109,7 +108,7 @@ def image_screening(image_path: str) -> str:
     return llm(query)
 
 
-def build_index(db_directory: str, vectorstore_name: str, text_path: str):
+def build_index(db_directory: str, vectorstore_name: str, text_path: str, embedding_function) -> None:
     """
     build a local vector db and store in db_directory
     """
@@ -131,29 +130,17 @@ def build_index(db_directory: str, vectorstore_name: str, text_path: str):
                 chunk_overlap=100
             )
 
-        # create_documents() create documents froma list of texts
+        # create_documents() create documents from a list of texts
         texts = text_splitter.create_documents([text_file_content])
 
-        # create a local vector database
-        model_name = "sentence-transformers/all-mpnet-base-v2"
-        model_kwargs = {'device': 'cuda'}
-        encode_kwargs = {'normalize_embeddings': False}
-        embedding_function = HuggingFaceEmbeddings(
-            model_name=model_name,
-            model_kwargs=model_kwargs,
-            encode_kwargs=encode_kwargs
-        )
-
+        # create a local vector database (example: https://python.langchain.com/docs/integrations/vectorstores/chroma)
         collection = Chroma.from_documents(texts,embedding_function,persist_directory=os.path.join(db_directory, f"{vectorstore_name}"))
 
-        # embeddings = OpenAIEmbeddings()
-        # vectorstore = FAISS.from_documents(texts, embeddings)
-        # vectorstore.save_local(os.path.join(db_directory, f"{vectorstore_name}"))
     else:
         print(f"{vectorstore_name} ALREADY exists")
 
 
-def text_synthesize(db_path: str, embeddings) -> str:
+def text_synthesize(db_path: str, embedding_function: str, query: str) -> str:
     """
     synthesize the key information from the text elements (a local vector db)
     Args:
@@ -161,12 +148,12 @@ def text_synthesize(db_path: str, embeddings) -> str:
     """
 
     # Load from local storage
-    persisted_vectorstore = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
+    persisted_vectorstore = Chroma(persist_directory=db_path, embedding_function=embedding_function)
 
-    # prompt for text synthesis
-    prompt = """
+    # query
+    result = persisted_vectorstore.similarity_search(query)
 
-    """
+    return result
 
 
 def table_analyze(xlsx_file_path: str, sheet_of_interest: str, user_query: str) -> str:
@@ -229,7 +216,22 @@ if __name__ == "__main__":
     # print(response)
 
     ## text synthsis
+    # create an embedding function
+    model_name = "sentence-transformers/all-mpnet-base-v2"
+    model_kwargs = {'device': 'cuda'}
+    encode_kwargs = {'normalize_embeddings': False}
+    embedding_function = HuggingFaceEmbeddings(
+        model_name=model_name,
+        model_kwargs=model_kwargs,
+        encode_kwargs=encode_kwargs
+    )
     # build index
-    build_index(db_directory=output_folder, vectorstore_name="test_index", text_path=os.path.sep.join([output_folder,"extracted_text.txt"]))
+    build_index(db_directory=output_folder, vectorstore_name="test_index", text_path=os.path.sep.join([output_folder,"extracted_text.txt"]),
+        embedding_function=embedding_function)
 
+    # query
+    query = "WHat is life cycle assessment?"
+    query_result = text_synthesize(db_path=os.path.sep.join([output_folder,"test_index"]),
+        embedding_function=embedding_function, query=query)
+    print(query_result)
 
