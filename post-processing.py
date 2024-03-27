@@ -13,9 +13,11 @@ import langchain_openai
 from langchain_community.document_loaders import TextLoader
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores.faiss import FAISS
+from langchain_community.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 import os
 import glob
 import base64
@@ -118,8 +120,8 @@ def build_index(db_directory: str, vectorstore_name: str, text_path: str):
     if not (vectorstore_name in files_in_directory):
         # only build the db when it does not exist
         # load text file
-        loader = TextLoader(text_path)
-        loader.load()
+        with open(text_path) as f:
+            text_file_content = f.read()
 
         # splits a long document into smaller chunks that can fit into the LLM's
         # model's context window
@@ -130,14 +132,26 @@ def build_index(db_directory: str, vectorstore_name: str, text_path: str):
             )
 
         # create_documents() create documents froma list of texts
-        texts = text_splitter.create_documents([loader])
+        texts = text_splitter.create_documents([text_file_content])
 
         # create a local vector database
-        embeddings = OpenAIEmbeddings()
-        vectorstore = FAISS.from_documents(texts, embeddings)
-        vectorstore.save_local(os.path.join(db_directory, f"{vectorstore_name}"))
+        model_name = "sentence-transformers/all-mpnet-base-v2"
+        model_kwargs = {'device': 'cuda'}
+        encode_kwargs = {'normalize_embeddings': False}
+        embedding_function = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs
+        )
+
+        collection = Chroma.from_documents(texts,embedding_function,persist_directory=os.path.join(db_directory, f"{vectorstore_name}"))
+
+        # embeddings = OpenAIEmbeddings()
+        # vectorstore = FAISS.from_documents(texts, embeddings)
+        # vectorstore.save_local(os.path.join(db_directory, f"{vectorstore_name}"))
     else:
         print(f"{vectorstore_name} ALREADY exists")
+
 
 def text_synthesize(db_path: str, embeddings) -> str:
     """
@@ -207,11 +221,15 @@ if __name__ == "__main__":
     # decision_df.to_csv(os.path.sep.join([output_folder,'image_screening_results.csv']), index=False)
 
     ## table analysis
-    xlsx_file_path = os.path.sep.join([output_folder, 'output_tables.xlsx'])
-    sheet_of_interest = 'extracted_tab_3'
-    user_query = 'what is the amount of Polyurethane (finger joint), please answer using only the information provided in prompt'
+    # xlsx_file_path = os.path.sep.join([output_folder, 'output_tables.xlsx'])
+    # sheet_of_interest = 'extracted_tab_3'
+    # user_query = 'what is the amount of Polyurethane (finger joint), please answer using only the information provided in prompt'
 
-    response = table_analyze(xlsx_file_path,sheet_of_interest,user_query)
-    print(response)
+    # response = table_analyze(xlsx_file_path,sheet_of_interest,user_query)
+    # print(response)
+
+    ## text synthsis
+    # build index
+    build_index(db_directory=output_folder, vectorstore_name="test_index", text_path=os.path.sep.join([output_folder,"extracted_text.txt"]))
 
 
