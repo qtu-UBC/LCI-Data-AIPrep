@@ -7,3 +7,4 @@ unstructured==0.11.6
 unstructured-client==0.15.0
 unstructured-inference==0.7.18
 unstructured.pytesseract==0.3.12
+chromadb==0.3.29 #higher version may cause the following error: https://community.render.com/t/your-system-has-an-unsupported-version-of-sqlite3-chroma-requires-sqlite3-3-35-0/13807
