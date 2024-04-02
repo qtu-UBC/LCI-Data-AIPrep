@@ -150,10 +150,22 @@ def text_synthesize(db_path: str, embedding_function: str, query: str) -> str:
     # Load from local storage
     persisted_vectorstore = Chroma(persist_directory=db_path, embedding_function=embedding_function)
 
-    # query
-    result = persisted_vectorstore.similarity_search(query)
+    # retrieve relevant chuncks
+    rag = persisted_vectorstore.similarity_search(query)
 
-    return result
+    # query with retrived information
+    template_string = """
+        [CONTEXT]: please answer the query below by using the information exclusively from {rag}.
+        [Query]: {query}
+        [Answer]:
+    """ 
+    prompt_template = PromptTemplate(
+        template=template_string,
+        input_variables=["rag", "query"]
+    )
+
+    query = prompt_template.template.format(rag=rag, query=query)
+    return llm(query)
 
 
 def table_analyze(xlsx_file_path: str, sheet_of_interest: str, user_query: str) -> str:
@@ -230,7 +242,15 @@ if __name__ == "__main__":
         embedding_function=embedding_function)
 
     # query
-    query = "WHat is life cycle assessment?"
+    query = """
+        Please answer the following questions and output the results in bullet point format for each question. Also for each of these questions, 
+            if you cannot find the answer, just say I DON'T KNOW
+        1. Estimate cradle-to-gate emission factor, in the unit that contains CO2eq, CO2e, CO2-eq, or CO2 eq
+        2. Breakdown the emission factor into buckets of raw materials, manufacturing, and transportation
+        3. WHere is the product manufactured and delivered to?
+        4. Data sources
+        5. return any values with the unit of g CO2eq, g CO2e, or g CO2-eq
+    """
     query_result = text_synthesize(db_path=os.path.sep.join([output_folder,"test_index"]),
         embedding_function=embedding_function, query=query)
     print(query_result)
