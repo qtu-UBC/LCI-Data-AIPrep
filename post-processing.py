@@ -91,10 +91,14 @@ def image_screening(image_path: str) -> str:
     template_string = """
         Given the context and specific details provided, please answer the following question.
 
-        Context: In a life cycle assessment study, there two types of figures:  (1) system boudary diagram: visually delineates the processes and flows to be included in the LCA, marking the limits of the analysis; 
-        (2) impact assessment results: visually represents the outcomes of the environmental impacts assessed, illustrating the magnitude and distribution of impacts across different categories.
+        Context: In a life cycle assessment study, there two types of figures:  
+        (1) system boudary diagram: visually delineates the processes and flows to be included in the LCA, 
+            marking the limits of the analysis; 
+        (2) impact assessment results: visually represents the outcomes of the environmental impacts assessed, 
+            illustrating the magnitude and distribution of impacts across different categories.
 
-        Question: based on the content of "{image_summary}", decide whether it is describing a system boundry diagram, an impact assessment results diagram, or neither. Output your answer
+        Question: based on the content of "{image_summary}", decide whether it is describing a system boundry diagram, 
+            an impact assessment results diagram, or neither. Output your answer
 
         Answer: """
 
@@ -243,8 +247,8 @@ if __name__ == "__main__":
 
     # query
     query = """
-        Please answer the following questions and output the results in bullet point format for each question. Also for each of these questions, 
-            if you cannot find the answer, just say I DON'T KNOW
+        Please answer the following questions and output the results in bullet point format for each question. 
+            Also for each of these questions, if you cannot find the answer, just say I DON'T KNOW
         1. Estimate cradle-to-gate emission factor, in the unit that contains CO2eq, CO2e, CO2-eq, or CO2 eq
         2. Breakdown the emission factor into buckets of raw materials, manufacturing, and transportation
         3. WHere is the product manufactured and delivered to?
