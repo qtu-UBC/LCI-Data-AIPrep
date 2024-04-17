@@ -29,6 +29,7 @@ Config
 # path to the extracted elements
 # same folder to store the post-processed elements
 output_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev/output"
+local_db_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev/local_db"
 
 vision_client = openai.OpenAI()
 llm = langchain_openai.OpenAI(temperature=0)
@@ -138,15 +139,15 @@ def build_index(db_directory: str, vectorstore_name: str, text_path: str, embedd
         texts = text_splitter.create_documents([text_file_content])
 
         # create a local vector database (example: https://python.langchain.com/docs/integrations/vectorstores/chroma)
-        collection = Chroma.from_documents(texts,embedding_function,persist_directory=os.path.join(db_directory, f"{vectorstore_name}"))
+        collection = Chroma.from_documents(texts,embedding_function,persist_directory=os.path.sep.join([db_directory, f"{vectorstore_name}"]))
 
     else:
         print(f"{vectorstore_name} ALREADY exists")
 
 
-def text_synthesize(db_path: str, embedding_function: str, query: str) -> str:
+def info_synthesize(db_path: str, embedding_function: str, query: str) -> str:
     """
-    synthesize the key information from the text elements (a local vector db)
+    synthesize the key information from the a local vector db
     Args:
         - db_path: str, full path to the faiss index 
     """
@@ -233,29 +234,48 @@ if __name__ == "__main__":
 
     ## text synthsis
     # create an embedding function
-    model_name = "sentence-transformers/all-mpnet-base-v2"
-    model_kwargs = {'device': 'cuda'}
-    encode_kwargs = {'normalize_embeddings': False}
-    embedding_function = HuggingFaceEmbeddings(
-        model_name=model_name,
-        model_kwargs=model_kwargs,
-        encode_kwargs=encode_kwargs
-    )
+    # model_name = "sentence-transformers/all-mpnet-base-v2"
+    # model_kwargs = {'device': 'cuda'}
+    # encode_kwargs = {'normalize_embeddings': False}
+    # embedding_function = HuggingFaceEmbeddings(
+    #     model_name=model_name,
+    #     model_kwargs=model_kwargs,
+    #     encode_kwargs=encode_kwargs
+    # )
     # build index
-    build_index(db_directory=output_folder, vectorstore_name="test_index", text_path=os.path.sep.join([output_folder,"extracted_text.txt"]),
-        embedding_function=embedding_function)
+    # build_index(db_directory=output_folder, vectorstore_name="test_index", 
+    #       text_path=os.path.sep.join([output_folder,"extracted_text.txt"]),
+    #       embedding_function=embedding_function)
 
-    # query
+    # # query
+    # query = """
+    #     Please answer the following questions and output the results in bullet point format for each question. 
+    #         Also for each of these questions, if you cannot find the answer, just say I DON'T KNOW
+    #     1. Estimate cradle-to-gate emission factor, in the unit that contains CO2eq, CO2e, CO2-eq, or CO2 eq
+    #     2. Breakdown the emission factor into buckets of raw materials, manufacturing, and transportation
+    #     3. WHere is the product manufactured and delivered to?
+    #     4. Data sources
+    #     5. return any values with the unit of g CO2eq, g CO2e, or g CO2-eq
+    # """
+    # query_result = info_synthesize(db_path=os.path.sep.join([output_folder,"test_index"]),
+    #     embedding_function=embedding_function, query=query)
+    # print(query_result)
+
+    ## query on db (multi-modal data)
+    embedding_function = OpenAIEmbeddings()
+
+        # # query
     query = """
         Please answer the following questions and output the results in bullet point format for each question. 
             Also for each of these questions, if you cannot find the answer, just say I DON'T KNOW
-        1. Estimate cradle-to-gate emission factor, in the unit that contains CO2eq, CO2e, CO2-eq, or CO2 eq
-        2. Breakdown the emission factor into buckets of raw materials, manufacturing, and transportation
-        3. WHere is the product manufactured and delivered to?
-        4. Data sources
-        5. return any values with the unit of g CO2eq, g CO2e, or g CO2-eq
+        1. How many tables in this pdf?
+        2. please show the content of Table 5
+        3. Based on the relationship you identified between these tables, please create a description 
+            of the system boundary of the subject 
+        4. Based on the description of the system boundary, please find the quantity of inputs and outputs from Table. 
+            Please print them in JSON format
+
     """
-    query_result = text_synthesize(db_path=os.path.sep.join([output_folder,"test_index"]),
+    query_result = info_synthesize(db_path=os.path.sep.join([local_db_folder,"test_42"]),
         embedding_function=embedding_function, query=query)
     print(query_result)
-
