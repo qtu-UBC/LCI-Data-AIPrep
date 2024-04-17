@@ -1,6 +1,7 @@
 TianGong-AI-Unstructure/
 .venv/
 output/
+local_db/
 *.pyc
 .DS_Store
 temp_output/
