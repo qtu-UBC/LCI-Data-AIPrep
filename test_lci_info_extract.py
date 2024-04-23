@@ -5,6 +5,7 @@ from unstructured.cleaners.core import (
 )
 from unstructured.documents.elements import Footer, Header, Image, CompositeElement, Table
 from unstructured.partition.auto import partition
+from unstructured.partition.image import partition_image
 from tools.vision import vision_completion
 import pandas as pd
 import re
@@ -31,8 +32,9 @@ def html_to_table(html_string: str) -> pd.DataFrame:
     """
     Converts an HTML string with table data to a pandas DataFrame.
 
-    :param html_string: String containing HTML data.
-    :return: A pandas DataFrame
+    - param:
+        - html_string: String containing HTML data.
+    - return: A pandas DataFrame
     """
     try:
         # Parse HTML string and convert tables to DataFrames
@@ -45,6 +47,35 @@ def html_to_table(html_string: str) -> pd.DataFrame:
         print(f"No tables found or error in parsing: {e}")
         return []
 
+def extract_table_from_img(image_path: str) -> pd.DataFrame:
+    """
+    Extract the table elements from an image and parse it into a DataFrame
+
+    - param:
+        - image_path: path to image of interest
+    - return: A pandas DataFrame
+    """
+
+    # extract elements
+    elements = partition_image(
+        filename=image_path,
+        infer_table_structure=True,
+    )
+
+    # parse table
+    table_list = []
+    for element in elements:
+        if isinstance(element, Table):
+            if table_list:
+                table_list[-1] = table_list[-1] + "\n" + element.metadata.text_as_html
+            else:
+                table_list.append(element.metadata.text_as_html) 
+
+    for table_as_html in table_list:
+        print(html_to_table(table_as_html))
+
+
+
 """
 ====
 Config information
@@ -54,6 +85,7 @@ input_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev
 output_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev/output"
 local_db_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev/local_db"
 pdf_name = os.path.sep.join([input_folder,"CtoG-LCA-Canadian-CLT.pdf"])
+image_path = os.path.sep.join([input_folder,"Tu 2016 table in img.png"])
 
 
 """
@@ -61,35 +93,40 @@ pdf_name = os.path.sep.join([input_folder,"CtoG-LCA-Canadian-CLT.pdf"])
 Code for extraction
 ====
 """
-min_image_width = 250
-min_image_height = 270
 
-elements = partition(
-    filename=pdf_name,
-    header_footer=False,
-    pdf_extract_images=True,
-    pdf_image_output_dir_path=output_folder, 
-    skip_infer_table_types=[], # "jpg", "png", "xls", "xlsx"
-    strategy="hi_res",
-    hi_res_model_name="yolox",
-)
+## test extracting table from image
+extract_table_from_img(image_path)
 
-filtered_elements = [
-    element
-    for element in elements
-    if not (isinstance(element, Header) or isinstance(element, Footer))
-]
 
-for element in filtered_elements:
-    if element.text != "":
-        element.text = group_broken_paragraphs(element.text)
-        element.text = clean(
-            element.text,
-            bullets=False,
-            extra_whitespace=True,
-            dashes=False,
-            trailing_punctuation=False,
-        )
+# min_image_width = 250
+# min_image_height = 270
+
+# elements = partition(
+#     filename=pdf_name,
+#     header_footer=False,
+#     pdf_extract_images=True,
+#     pdf_image_output_dir_path=output_folder, 
+#     skip_infer_table_types=[], # "jpg", "png", "xls", "xlsx"
+#     strategy="hi_res",
+#     hi_res_model_name="yolox",
+# )
+
+# filtered_elements = [
+#     element
+#     for element in elements
+#     if not (isinstance(element, Header) or isinstance(element, Footer))
+# ]
+
+# for element in filtered_elements:
+#     if element.text != "":
+#         element.text = group_broken_paragraphs(element.text)
+#         element.text = clean(
+#             element.text,
+#             bullets=False,
+#             extra_whitespace=True,
+#             dashes=False,
+#             trailing_punctuation=False,
+        # )
     # elif isinstance(element, Image):
     #     point1 = element.metadata.coordinates.points[0]
     #     point2 = element.metadata.coordinates.points[2]
@@ -99,53 +136,54 @@ for element in filtered_elements:
             # generate text from the image
             # element.text = vision_completion(element.metadata.image_path)
 
-chunks = chunk_by_title(
-    elements=filtered_elements,
-    multipage_sections=True,
-    combine_text_under_n_chars=100,
-    new_after_n_chars=512,
-    max_characters=4096,
-)
+# chunks = chunk_by_title(
+#     elements=filtered_elements,
+#     multipage_sections=True,
+#     combine_text_under_n_chars=100,
+#     new_after_n_chars=512,
+#     max_characters=4096,
+# )
+
 
 """
 ====
 Load the elments into a Vector DB
 ====
 """
-vectorstore_name = "test_42"
+# vectorstore_name = "test_42"
 
-# List all files in the specified directory
-files_in_directory = os.listdir(local_db_folder)
+# # List all files in the specified directory
+# files_in_directory = os.listdir(local_db_folder)
 
-if not (vectorstore_name in files_in_directory):
-    # only build the db when it does not exist
-    documents = []
-    table_count = 0
+# if not (vectorstore_name in files_in_directory):
+#     # only build the db when it does not exist
+#     documents = []
+#     table_count = 0
 
-    for chunk in chunks:
-        metadata = chunk.metadata.to_dict()
-        metadata["languages"] = metadata["languages"][0] # Chroma cannot handle list as metatdata value type
-        try:
-            del metadata["coordinates"] # Chroma cannot handle dict as metatdata value type
-        except KeyError:
-            pass
-            # print("'coordinates' does not exist in metadata")
-        metadata["source"] = metadata["filename"]
-        # check if any table was extracted
-        if 'text_as_html' in metadata.keys():
-            table_count += 1
+#     for chunk in chunks:
+#         metadata = chunk.metadata.to_dict()
+#         metadata["languages"] = metadata["languages"][0] # Chroma cannot handle list as metatdata value type
+#         try:
+#             del metadata["coordinates"] # Chroma cannot handle dict as metatdata value type
+#         except KeyError:
+#             pass
+#             # print("'coordinates' does not exist in metadata")
+#         metadata["source"] = metadata["filename"]
+#         # check if any table was extracted
+#         if 'text_as_html' in metadata.keys():
+#             table_count += 1
 
-        documents.append(Document(page_content=element.text, metadata=metadata))
+#         documents.append(Document(page_content=element.text, metadata=metadata))
 
-    # print(documents)
-    print(f"TOTAL # of table extracted: {table_count}")
+#     # print(documents)
+#     print(f"TOTAL # of table extracted: {table_count}")
 
-    # embed the chunks
-    embeddings = OpenAIEmbeddings()
-    vectorstore = Chroma.from_documents(documents, embeddings, persist_directory=os.path.sep.join([local_db_folder, f"{vectorstore_name}"]))
+#     # embed the chunks
+#     embeddings = OpenAIEmbeddings()
+#     vectorstore = Chroma.from_documents(documents, embeddings, persist_directory=os.path.sep.join([local_db_folder, f"{vectorstore_name}"]))
 
-else:
-    print(f"{vectorstore_name} already exists !!!")
+# else:
+#     print(f"{vectorstore_name} already exists !!!")
 
 """
 ====
