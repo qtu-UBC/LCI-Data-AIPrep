@@ -6,3 +6,4 @@ local_db/
 .DS_Store
 temp_output/
 __pycache__/
+input/
