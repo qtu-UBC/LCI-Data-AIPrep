@@ -71,8 +71,18 @@ def extract_table_from_img(image_path: str) -> pd.DataFrame:
             else:
                 table_list.append(element.metadata.text_as_html) 
 
+    # prepare a list of tables (after being converted to DataFrame)
+    table_dfs = []
     for table_as_html in table_list:
-        print(html_to_table(table_as_html))
+        # print(html_to_table(table_as_html))
+        table_dfs.append(html_to_table(table_as_html))
+
+    # Export the tables into an xlsx file
+    # Strip the extension from the image_path
+    base_image_name = os.path.splitext(os.path.basename(image_path))[0]
+    with pd.ExcelWriter(os.path.sep.join([output_folder,f"output_tables_from_{base_image_name}.xlsx"])) as writer:
+        for i,table_df in enumerate(table_dfs):
+            table_df.to_excel(writer, sheet_name=f"extracted_tab_{i}")
 
 
 
@@ -85,7 +95,8 @@ input_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev
 output_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev/output"
 local_db_folder = "/home/bizon/Documents/code_projects/tiangong_ai_unstructured_dev/local_db"
 pdf_name = os.path.sep.join([input_folder,"CtoG-LCA-Canadian-CLT.pdf"])
-image_path = os.path.sep.join([input_folder,"Tu 2016 table in img.png"])
+image_input_folder = os.path.sep.join([input_folder,"image_input"])
+# image_path = os.path.sep.join([image_input_folder,"Tu 2016 table in img.png"])
 
 
 """
@@ -95,7 +106,11 @@ Code for extraction
 """
 
 ## test extracting table from image
-extract_table_from_img(image_path)
+image_files_in_directory = os.listdir(image_input_folder)
+
+for image_file in image_files_in_directory:
+    print(f"\n === NOW PROCESSING === \n {image_file} \n")
+    extract_table_from_img(os.path.sep.join([image_input_folder,image_file]))
 
 
 # min_image_width = 250
