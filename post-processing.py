@@ -17,10 +17,12 @@ from langchain_community.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.retrievers import BM25Retriever, EnsembleRetriever
 import os
 import glob
 import base64
 import pandas as pd
+from typing import List
 
 
 """
@@ -141,11 +143,14 @@ def build_index(db_directory: str, vectorstore_name: str, text_path: str, embedd
         # create a local vector database (example: https://python.langchain.com/docs/integrations/vectorstores/chroma)
         collection = Chroma.from_documents(texts,embedding_function,persist_directory=os.path.sep.join([db_directory, f"{vectorstore_name}"]))
 
+        # return text chunks for hybrid search
+        return texts
+
     else:
         print(f"{vectorstore_name} ALREADY exists")
 
 
-def info_synthesize(db_path: str, embedding_function: str, query: str) -> str:
+def info_synthesize(db_path: str, text_chunks: List, embedding_function: str, query: str) -> str:
     """
     synthesize the key information from the a local vector db
     Args:
@@ -155,8 +160,20 @@ def info_synthesize(db_path: str, embedding_function: str, query: str) -> str:
     # Load from local storage
     persisted_vectorstore = Chroma(persist_directory=db_path, embedding_function=embedding_function)
 
-    # retrieve relevant chuncks
-    rag = persisted_vectorstore.similarity_search(query)
+    # retrieve relevant chuncks using hybrid search
+    # rag = persisted_vectorstore.similarity_search(query)
+
+    # build different retrievers and ensemble them
+    vectorstore_retreiver = persisted_vectorstore.as_retriever(search_kwargs={"k": 3})
+    keyword_retriever = BM25Retriever.from_documents(text_chunks)
+    keyword_retriever.k = 3
+
+    ensemble_retriever = EnsembleRetriever(retrievers=[vectorstore_retreiver,keyword_retriever],
+                                            weights=[0.3, 0.7])
+
+    # create the hybrid search chain
+    hybrid_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=ensemble_retriever)
+    rag = hybrid_chain.invoke(query)
 
     # query with retrived information
     template_string = """
@@ -234,18 +251,18 @@ if __name__ == "__main__":
 
     ## text synthsis
     # create an embedding function
-    # model_name = "sentence-transformers/all-mpnet-base-v2"
-    # model_kwargs = {'device': 'cuda'}
-    # encode_kwargs = {'normalize_embeddings': False}
-    # embedding_function = HuggingFaceEmbeddings(
-    #     model_name=model_name,
-    #     model_kwargs=model_kwargs,
-    #     encode_kwargs=encode_kwargs
-    # )
+    model_name = "sentence-transformers/all-mpnet-base-v2"
+    model_kwargs = {'device': 'cuda'}
+    encode_kwargs = {'normalize_embeddings': False}
+    embedding_function = HuggingFaceEmbeddings(
+        model_name=model_name,
+        model_kwargs=model_kwargs,
+        encode_kwargs=encode_kwargs
+    )
     # build index
-    # build_index(db_directory=output_folder, vectorstore_name="test_index", 
-    #       text_path=os.path.sep.join([output_folder,"extracted_text.txt"]),
-    #       embedding_function=embedding_function)
+    text_chunks = build_index(db_directory=local_db_folder, vectorstore_name="test_42", 
+          text_path=os.path.sep.join([output_folder,"extracted_text.txt"]),
+          embedding_function=embedding_function)
 
     # # query
     # query = """
@@ -276,6 +293,6 @@ if __name__ == "__main__":
             Please print them in JSON format
 
     """
-    query_result = info_synthesize(db_path=os.path.sep.join([local_db_folder,"test_42"]),
+    query_result = info_synthesize(db_path=os.path.sep.join([local_db_folder,"test_42"]), text_chunks=text_chunks,
         embedding_function=embedding_function, query=query)
     print(query_result)
