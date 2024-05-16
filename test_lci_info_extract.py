@@ -15,6 +15,8 @@ import os
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
+import weaviate
+
 
 """
 ====
@@ -98,6 +100,20 @@ pdf_name = os.path.sep.join([input_folder,"CtoG-LCA-Canadian-CLT.pdf"])
 image_input_folder = os.path.sep.join([input_folder,"image_input"])
 # image_path = os.path.sep.join([image_input_folder,"Tu 2016 table in img.png"])
 
+"""
+====
+Code for multimodal query
+====
+"""
+client = weaviate.connect_to_embedded(
+    version="1.24.4",
+    environment_variables={
+        "ENABLE_MODULES": "multi2vec-palm, text2vec-openai"
+    },
+    headers={
+        
+    }
+)
 
 """
 ====
