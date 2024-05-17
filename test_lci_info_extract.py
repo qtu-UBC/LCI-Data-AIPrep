@@ -16,6 +16,8 @@ from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 import weaviate
+from weaviate.classes.config import COnfigure, DataType, Property
+
 
 
 """
@@ -100,20 +102,37 @@ pdf_name = os.path.sep.join([input_folder,"CtoG-LCA-Canadian-CLT.pdf"])
 image_input_folder = os.path.sep.join([input_folder,"image_input"])
 # image_path = os.path.sep.join([image_input_folder,"Tu 2016 table in img.png"])
 
+
 """
 ====
 Code for multimodal query
 ====
 """
+MM_EMBEDDING_API_KEY = os.getenv('GOOGLE_AI_API_KEY')
+TEXT_EMBEDDING_API_KEY = os.getenv('OPENAI_API_KEY')
+
 client = weaviate.connect_to_embedded(
     version="1.24.4",
     environment_variables={
         "ENABLE_MODULES": "multi2vec-palm, text2vec-openai"
     },
     headers={
-        
+        "X-PALM-Api-Key": MM_EMBEDDING_API_KEY,
+        "X-OpenAI-Api-Key": TEXT_EMBEDDING_API_KEY
     }
 )
+
+client.is_ready()
+
+# create a collection
+client.collections.create(
+    name="TestLCI",
+    properties=[
+        Property(name='title',data_type=DataType.TEXT),
+        Property(name='')
+    ]
+)
+
 
 """
 ====
@@ -122,11 +141,11 @@ Code for extraction
 """
 
 ## test extracting table from image
-image_files_in_directory = os.listdir(image_input_folder)
+# image_files_in_directory = os.listdir(image_input_folder)
 
-for image_file in image_files_in_directory:
-    print(f"\n === NOW PROCESSING === \n {image_file} \n")
-    extract_table_from_img(os.path.sep.join([image_input_folder,image_file]))
+# for image_file in image_files_in_directory:
+#     print(f"\n === NOW PROCESSING === \n {image_file} \n")
+#     extract_table_from_img(os.path.sep.join([image_input_folder,image_file]))
 
 
 # min_image_width = 250
