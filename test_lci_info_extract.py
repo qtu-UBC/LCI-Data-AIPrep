@@ -16,7 +16,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 import weaviate
-from weaviate.classes.config import COnfigure, DataType, Property
+from weaviate.classes.config import Configure, DataType, Property
 
 
 
@@ -89,7 +89,6 @@ def extract_table_from_img(image_path: str) -> pd.DataFrame:
             table_df.to_excel(writer, sheet_name=f"extracted_tab_{i}")
 
 
-
 """
 ====
 Config information
@@ -108,30 +107,30 @@ image_input_folder = os.path.sep.join([input_folder,"image_input"])
 Code for multimodal query
 ====
 """
-MM_EMBEDDING_API_KEY = os.getenv('GOOGLE_AI_API_KEY')
-TEXT_EMBEDDING_API_KEY = os.getenv('OPENAI_API_KEY')
+# MM_EMBEDDING_API_KEY = os.getenv('GOOGLE_AI_API_KEY')
+# TEXT_EMBEDDING_API_KEY = os.getenv('OPENAI_API_KEY')
 
-client = weaviate.connect_to_embedded(
-    version="1.24.4",
-    environment_variables={
-        "ENABLE_MODULES": "multi2vec-palm, text2vec-openai"
-    },
-    headers={
-        "X-PALM-Api-Key": MM_EMBEDDING_API_KEY,
-        "X-OpenAI-Api-Key": TEXT_EMBEDDING_API_KEY
-    }
-)
+# client = weaviate.connect_to_embedded(
+#     version="1.24.4",
+#     environment_variables={
+#         "ENABLE_MODULES": "multi2vec-palm, text2vec-openai"
+#     },
+#     headers={
+#         "X-PALM-Api-Key": MM_EMBEDDING_API_KEY,
+#         "X-OpenAI-Api-Key": TEXT_EMBEDDING_API_KEY
+#     }
+# )
 
-client.is_ready()
+# client.is_ready()
 
-# create a collection
-client.collections.create(
-    name="TestLCI",
-    properties=[
-        Property(name='title',data_type=DataType.TEXT),
-        Property(name='')
-    ]
-)
+# # create a collection
+# client.collections.create(
+#     name="TestLCI",
+#     properties=[
+#         Property(name='title',data_type=DataType.TEXT),
+#         Property(name='')
+#     ]
+# )
 
 
 """
