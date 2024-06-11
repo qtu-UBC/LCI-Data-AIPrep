@@ -17,7 +17,7 @@ from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 import weaviate
 from weaviate.classes.config import Configure, DataType, Property
-
+from weaviate.util import generate_uuid5
 
 """
 ====
@@ -36,6 +36,11 @@ image_input_folder = os.path.sep.join([input_folder,"image_input"])
 Code for multimodal query
 ====
 """
+# Helper function to convert a file to base64 representation
+def toBase64(path):
+    with open(path, 'rb') as file:
+        return base64.b64encode(file.read()).decode('utf-8')
+    
 # get elements from a pdf
 elements = partition_pdf(pdf_name)
 
@@ -56,6 +61,9 @@ client = weaviate.connect_to_embedded(
 
 client.is_ready()
 
+# delete the existing collection
+client.collections.delete("TestLCIPdfs")
+
 # create a collection
 client.collections.create(
     name="TestLCIPdfs",
@@ -64,10 +72,8 @@ client.collections.create(
         Property(name='abstract', data_type=DataType.TEXT),
         Property(name='image', data_type=DataType.BLOB),
     ],
-
-    # define and configure the vector spaces
+    # vectorize the pdf title & abstract
     vectorizer_config=[
-        # vectorize the pdf title & abstract
         Configure.NamedVectors.text2vec_openai(
             name='txt_vector',
             source_properties=['title','abstract'],
@@ -84,6 +90,7 @@ client.collections.create(
             dimensions=1408,
         ),
     ]
-
 )
+# import text and image data
+lciPdfs = client.collections.get("TestLCIPdfs")
 
