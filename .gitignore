@@ -1,5 +1,6 @@
 TianGong-AI-Unstructure/
 .venv/
+.vscode/
 output/
 local_db/
 *.pyc
